@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vencimiento</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Vencimiento</h1>
+      <p>Consulta de stock Panal</p>
+    </div>
+    <div class="session">
+      <span id="statusDot"></span>
+      <span id="statusText">Cargando</span>
+      <button id="logoutButton" hidden>Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel auth" id="authPanel">
+      <h2>Ingresar</h2>
+      <form id="authForm">
+        <label>
+          Correo
+          <input id="emailInput" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          Contrasena
+          <input id="passwordInput" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <section id="appPanel" hidden>
+      <section class="panel search">
+        <form id="searchForm">
+          <label>
+            SKU
+            <input id="skuInput" autocomplete="off" placeholder="Ej: PFI072" required>
+          </label>
+          <label>
+            Bodega
+            <select id="warehouseInput">
+              <option value="">Todas</option>
+              <option value="1">Bodega 1</option>
+              <option value="8">Bodega 8</option>
+            </select>
+          </label>
+          <button class="primary" id="searchButton" type="submit">Buscar</button>
+        </form>
+      </section>
+
+      <section class="metrics">
+        <div><span>Stock disp.</span><strong id="metricStock">-</strong></div>
+        <div><span>No disp.</span><strong id="metricNoDisp">-</strong></div>
+        <div><span>Total</span><strong id="metricTotal">-</strong></div>
+        <div><span>Lineas</span><strong id="metricLines">-</strong></div>
+      </section>
+
+      <p id="message"></p>
+      <section class="panel">
+        <div class="resultsHead">
+          <div>
+            <h2 id="resultTitle">Vencimiento</h2>
+            <p id="resultSubtitle">Ingresa un SKU para consultar lote, vencimiento y stock.</p>
+          </div>
+          <span id="resultCount"></span>
+        </div>
+        <div id="results" class="empty">Sin consulta.</div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
