@@ -11,7 +11,7 @@
   <header>
     <div>
       <h1>Vencimiento</h1>
-      <p>Consulta de stock Panal</p>
+      <p>Inventario y notas de venta</p>
     </div>
     <div class="session">
       <span id="statusDot"></span>
@@ -37,41 +37,71 @@
     </section>
 
     <section id="appPanel" hidden>
-      <section class="panel search">
-        <form id="searchForm">
-          <label>
-            SKU
-            <input id="skuInput" autocomplete="off" placeholder="Ej: PFI072" required>
-          </label>
-          <label>
-            Bodega
-            <select id="warehouseInput">
-              <option value="">Todas</option>
-              <option value="1">Bodega 1</option>
-              <option value="8">Bodega 8</option>
-            </select>
-          </label>
-          <button class="primary" id="searchButton" type="submit">Buscar</button>
-        </form>
-      </section>
-
-      <section class="metrics">
-        <div><span>Stock disp.</span><strong id="metricStock">-</strong></div>
-        <div><span>No disp.</span><strong id="metricNoDisp">-</strong></div>
-        <div><span>Total</span><strong id="metricTotal">-</strong></div>
-        <div><span>Lineas</span><strong id="metricLines">-</strong></div>
-      </section>
+      <nav class="tabs" aria-label="Modulos">
+        <button class="tabButton active" type="button" data-tab="stockView">Inventario</button>
+        <button class="tabButton" type="button" data-tab="noteView">Nota de venta</button>
+      </nav>
 
       <p id="message"></p>
-      <section class="panel">
-        <div class="resultsHead">
-          <div>
-            <h2 id="resultTitle">Vencimiento</h2>
-            <p id="resultSubtitle">Ingresa un SKU para consultar lote, vencimiento y stock.</p>
+
+      <section id="stockView">
+        <section class="panel search">
+          <form id="searchForm">
+            <label>
+              SKU
+              <input id="skuInput" autocomplete="off" placeholder="Ej: PFI072" required>
+            </label>
+            <button class="primary" id="searchButton" type="submit">Buscar</button>
+          </form>
+        </section>
+
+        <section class="metrics">
+          <div><span>Bodega 1</span><strong id="metricBodega1">-</strong></div>
+          <div><span>Bodega 8</span><strong id="metricBodega8">-</strong></div>
+          <div><span>Notas venta</span><strong id="metricNotasVenta">-</strong></div>
+          <div><span>Disponible</span><strong id="metricDisponible">-</strong></div>
+        </section>
+
+        <section class="panel">
+          <div class="resultsHead">
+            <div>
+              <h2 id="resultTitle">Inventario</h2>
+              <p id="resultSubtitle">Disponible = Bodega 1 + Bodega 8 - Notas de venta.</p>
+            </div>
+            <span id="resultCount"></span>
           </div>
-          <span id="resultCount"></span>
-        </div>
-        <div id="results" class="empty">Sin consulta.</div>
+          <div id="results" class="empty">Sin consulta.</div>
+        </section>
+      </section>
+
+      <section id="noteView" hidden>
+        <section class="panel search">
+          <form id="noteForm">
+            <label>
+              Numero nota de venta
+              <input id="noteInput" inputmode="numeric" autocomplete="off" placeholder="Ej: 472589" required>
+            </label>
+            <button class="primary" id="noteButton" type="submit">Consultar</button>
+          </form>
+        </section>
+
+        <section class="metrics noteMetrics">
+          <div><span>Estado pedido</span><strong id="noteMetricEstado">-</strong></div>
+          <div><span>Factura</span><strong id="noteMetricFactura">-</strong></div>
+          <div><span>PI completas</span><strong id="noteMetricPiOk">-</strong></div>
+          <div><span>PI pendientes</span><strong id="noteMetricPiPending">-</strong></div>
+        </section>
+
+        <section class="panel">
+          <div class="resultsHead">
+            <div>
+              <h2 id="noteTitle">Nota de venta</h2>
+              <p id="noteSubtitle">Ingresa una N.Venta para ver estado y factura si existe.</p>
+            </div>
+            <span id="noteCount"></span>
+          </div>
+          <div id="noteResults" class="empty">Sin consulta.</div>
+        </section>
       </section>
     </section>
   </main>

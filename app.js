@@ -18,6 +18,18 @@ const qty = (value) => {
   return Number.isFinite(num) ? num.toLocaleString("es-CL") : String(value || "");
 };
 
+const signedQty = (value) => {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return String(value || "");
+  return num.toLocaleString("es-CL");
+};
+
+const dateTime = (value) => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("es-CL");
+};
+
 function setStatus(ok, text) {
   $("statusDot").className = ok ? "ok" : "";
   $("statusText").textContent = text;
@@ -34,77 +46,134 @@ function message(text, type = "") {
   $("message").className = type;
 }
 
-function totals(rows) {
-  return rows.reduce((acc, row) => {
-    acc.stock += Number(row.stock || 0);
-    acc.noDisponible += Number(row.noDisponible || 0);
-    acc.total += Number(row.total || 0);
-    return acc;
-  }, {stock: 0, noDisponible: 0, total: 0});
-}
-
-function groupRows(rows) {
-  const map = new Map();
-  for (const row of rows) {
-    const key = [row.sku, row.descripcion, row.lote, row.vencimiento].join("\u001f");
-    if (!map.has(key)) {
-      map.set(key, {
-        sku: row.sku,
-        descripcion: row.descripcion,
-        lote: row.lote || "-",
-        vencimiento: row.vencimiento || "-",
-        stock: 0,
-        noDisponible: 0,
-        total: 0,
-        lineas: 0,
-      });
-    }
-    const group = map.get(key);
-    group.stock += Number(row.stock || 0);
-    group.noDisponible += Number(row.noDisponible || 0);
-    group.total += Number(row.total || 0);
-    group.lineas += 1;
-  }
-  return Array.from(map.values()).sort((a, b) => String(a.vencimiento).localeCompare(String(b.vencimiento)) || String(a.lote).localeCompare(String(b.lote)));
+function unique(values) {
+  return values.map((value) => String(value || "").trim()).filter((value, index, all) => value && all.indexOf(value) === index);
 }
 
 function renderTable(headers, rows, rowHtml) {
-  return `<div class="tableWrap"><table><thead><tr>${headers.map((h) => `<th class="${h.cls || ""}">${h.label}</th>`).join("")}</tr></thead><tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
+  return `<div class="tableWrap"><table><thead><tr>${headers.map((h) => `<th class="${h.cls || ""}">${escapeHtml(h.label)}</th>`).join("")}</tr></thead><tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
 }
 
 function renderCards(rows, cardHtml) {
   return `<div class="cards">${rows.map(cardHtml).join("")}</div>`;
 }
 
-function render(data) {
+function resetStockMetrics() {
+  $("metricBodega1").textContent = "-";
+  $("metricBodega8").textContent = "-";
+  $("metricNotasVenta").textContent = "-";
+  $("metricDisponible").textContent = "-";
+}
+
+function resetNoteMetrics() {
+  $("noteMetricEstado").textContent = "-";
+  $("noteMetricFactura").textContent = "-";
+  $("noteMetricPiOk").textContent = "-";
+  $("noteMetricPiPending").textContent = "-";
+}
+
+function renderStock(data) {
   const rows = data.rows || [];
-  const sum = totals(rows);
-  $("metricStock").textContent = qty(sum.stock);
-  $("metricNoDisp").textContent = qty(sum.noDisponible);
-  $("metricTotal").textContent = qty(sum.total);
-  $("metricLines").textContent = qty(rows.length);
-  $("resultTitle").textContent = data.query ? `Vencimiento: ${data.query}` : "Vencimiento";
-  $("resultSubtitle").textContent = data.time ? `Ultima consulta: ${data.time}` : "";
-  $("resultCount").textContent = data.message || `${rows.length} lineas.`;
+  const totals = data.totals || {bodega1: 0, bodega8: 0, notasVenta: 0, disponible: 0};
+  $("metricBodega1").textContent = qty(totals.bodega1);
+  $("metricBodega8").textContent = qty(totals.bodega8);
+  $("metricNotasVenta").textContent = qty(totals.notasVenta);
+  $("metricDisponible").textContent = signedQty(totals.disponible);
+  $("resultTitle").textContent = data.query ? `Inventario: ${data.query}` : "Inventario";
+  $("resultSubtitle").textContent = data.time ? `Ultima consulta: ${dateTime(data.time)}. Disponible = B1 + B8 - Notas de venta.` : "Disponible = Bodega 1 + Bodega 8 - Notas de venta.";
+  $("resultCount").textContent = data.message || `${rows.length} productos.`;
+
   if (!rows.length) {
-    $("results").innerHTML = `<div class="empty">${escapeHtml(data.message || "Sin stock para mostrar.")}</div>`;
+    $("results").innerHTML = `<div class="empty">${escapeHtml(data.message || "Sin productos para mostrar.")}</div>`;
     return;
   }
 
-  const groups = groupRows(rows);
-  const grouped = renderTable(
-    [{label: "Producto"}, {label: "Lote"}, {label: "Vcto"}, {label: "Stock", cls: "right"}, {label: "N.Disp", cls: "right"}, {label: "Total", cls: "right"}, {label: "Lineas", cls: "right"}],
-    groups,
-    (g) => `<tr><td><div class="sku">${escapeHtml(g.sku)}</div><div class="desc">${escapeHtml(g.descripcion)}</div></td><td>${escapeHtml(g.lote)}</td><td>${escapeHtml(g.vencimiento)}</td><td class="right">${escapeHtml(qty(g.stock))}</td><td class="right">${escapeHtml(qty(g.noDisponible))}</td><td class="right">${escapeHtml(qty(g.total))}</td><td class="right">${escapeHtml(qty(g.lineas))}</td></tr>`,
-  ) + renderCards(groups, (g) => `<div class="item"><div class="top"><div><div class="sku">${escapeHtml(g.sku)}</div><div class="desc">${escapeHtml(g.descripcion)}</div></div><strong>${escapeHtml(qty(g.stock))}</strong></div><div class="kv"><span>Lote</span><strong>${escapeHtml(g.lote)}</strong></div><div class="kv"><span>Vcto</span><strong>${escapeHtml(g.vencimiento)}</strong></div><div class="kv"><span>Total</span><strong>${escapeHtml(qty(g.total))}</strong></div><div class="kv"><span>Lineas</span><strong>${escapeHtml(qty(g.lineas))}</strong></div></div>`);
-
-  const detail = renderTable(
-    [{label: "Producto"}, {label: "Bodega"}, {label: "Ubicacion"}, {label: "Lote"}, {label: "Vcto"}, {label: "LPN"}, {label: "Stock", cls: "right"}, {label: "N.Disp", cls: "right"}, {label: "Total", cls: "right"}],
+  const table = renderTable(
+    [
+      {label: "Producto"},
+      {label: "Laboratorio"},
+      {label: "Bodega 1", cls: "right"},
+      {label: "Bodega 8", cls: "right"},
+      {label: "Notas venta", cls: "right"},
+      {label: "Disponible", cls: "right"},
+      {label: "Estado"},
+    ],
     rows,
-    (row) => `<tr><td><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></td><td>${escapeHtml(row.bodega)}</td><td>${escapeHtml(row.ubicacion)}</td><td>${escapeHtml(row.lote || "-")}</td><td>${escapeHtml(row.vencimiento || "-")}</td><td>${escapeHtml(row.lpn || "-")}</td><td class="right">${escapeHtml(qty(row.stock))}</td><td class="right">${escapeHtml(qty(row.noDisponible))}</td><td class="right">${escapeHtml(qty(row.total))}</td></tr>`,
-  ) + renderCards(rows, (row) => `<div class="item"><div class="top"><div><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></div><strong>${escapeHtml(qty(row.stock))}</strong></div><div class="kv"><span>Bodega</span><strong>${escapeHtml(row.bodega)}</strong></div><div class="kv"><span>Ubicacion</span><strong>${escapeHtml(row.ubicacion)}</strong></div><div class="kv"><span>Lote</span><strong>${escapeHtml(row.lote || "-")}</strong></div><div class="kv"><span>Vcto</span><strong>${escapeHtml(row.vencimiento || "-")}</strong></div></div>`);
+    (row) => `<tr>
+      <td><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></td>
+      <td>${escapeHtml(row.laboratorio || "-")}</td>
+      <td class="right">${escapeHtml(qty(row.bodega1))}</td>
+      <td class="right">${escapeHtml(qty(row.bodega8))}</td>
+      <td class="right">${escapeHtml(qty(row.notasVenta))}</td>
+      <td class="right strong">${escapeHtml(signedQty(row.disponible))}</td>
+      <td><span class="pill ${Number(row.disponible || 0) > 0 ? "good" : "muted"}">${escapeHtml(row.stockEstado || "-")}</span></td>
+    </tr>`,
+  );
 
-  $("results").innerHTML = `<div class="sectionTitle">Stock por lote y vencimiento</div>${grouped}<div class="sectionTitle">Detalle por ubicacion</div>${detail}`;
+  const cards = renderCards(rows, (row) => `<div class="item">
+    <div class="top"><div><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></div><strong>${escapeHtml(signedQty(row.disponible))}</strong></div>
+    <div class="kv"><span>Laboratorio</span><strong>${escapeHtml(row.laboratorio || "-")}</strong></div>
+    <div class="kv"><span>Bodega 1</span><strong>${escapeHtml(qty(row.bodega1))}</strong></div>
+    <div class="kv"><span>Bodega 8</span><strong>${escapeHtml(qty(row.bodega8))}</strong></div>
+    <div class="kv"><span>Notas venta</span><strong>${escapeHtml(qty(row.notasVenta))}</strong></div>
+  </div>`);
+
+  $("results").innerHTML = `${table}${cards}`;
+}
+
+function facturaText(row) {
+  const rowFacturas = Array.isArray(row.facturas) ? row.facturas : [];
+  return rowFacturas.length ? rowFacturas.join(", ") : "-";
+}
+
+function renderNote(data) {
+  const rows = data.rows || [];
+  const facturas = Array.isArray(data.facturas) ? data.facturas : [];
+  $("noteMetricEstado").textContent = data.estadoPedido || "-";
+  $("noteMetricFactura").textContent = facturas.length ? facturas.join(", ") : "-";
+  $("noteMetricPiOk").textContent = qty(data.piCompletas);
+  $("noteMetricPiPending").textContent = qty(data.piPendientes);
+  $("noteTitle").textContent = data.folio ? `Nota de venta: ${data.folio}` : "Nota de venta";
+  const mode = data.searchMode === "pedido" ? "Busqueda por numero de pedido." : "Busqueda por folio de N.Venta.";
+  $("noteSubtitle").textContent = data.time ? `${mode} Ultima consulta: ${dateTime(data.time)}.` : mode;
+  $("noteCount").textContent = data.message || `${rows.length} pedidos.`;
+
+  if (!rows.length) {
+    $("noteResults").innerHTML = `<div class="empty">${escapeHtml(data.message || "Sin resultados para mostrar.")}</div>`;
+    return;
+  }
+
+  const table = renderTable(
+    [
+      {label: "Pedido"},
+      {label: "N.Venta"},
+      {label: "Auxiliar"},
+      {label: "Fechas"},
+      {label: "Flujo"},
+      {label: "Estado"},
+      {label: "Factura"},
+    ],
+    rows,
+    (row) => `<tr>
+      <td><div class="sku">${escapeHtml(row.pedido || "-")}</div><div class="desc">${escapeHtml(row.tipo || "")}</div></td>
+      <td>${escapeHtml(row.folio || "-")}</td>
+      <td><div>${escapeHtml(row.auxiliar || "-")}</div><div class="desc">${escapeHtml(row.autor || "")}</div></td>
+      <td><div>${escapeHtml(row.fechaEmision || "-")}</div><div class="desc">${escapeHtml(row.fechaCompromiso || "")}</div></td>
+      <td class="flow">${["creacion", "picking", "control", "empaque", "despacho"].map((key) => `<span>${escapeHtml(row[key] || "-")}</span>`).join("")}</td>
+      <td><span class="pill ${/picking|despachar|terminado|completa/i.test(row.estadoPedido || "") ? "good" : "muted"}">${escapeHtml(row.estadoPedido || "-")}</span><div class="desc">${escapeHtml(row.piEstado || data.estadoFactura || "")}</div></td>
+      <td><strong>${escapeHtml(facturaText(row))}</strong><div class="desc">${escapeHtml(unique([row.facturaTipo, row.facturaEstado]).join(" / "))}</div></td>
+    </tr>`,
+  );
+
+  const cards = renderCards(rows, (row) => `<div class="item">
+    <div class="top"><div><div class="sku">Pedido ${escapeHtml(row.pedido || "-")}</div><div class="desc">N.Venta ${escapeHtml(row.folio || "-")}</div></div><strong>${escapeHtml(facturaText(row))}</strong></div>
+    <div class="kv"><span>Estado</span><strong>${escapeHtml(row.estadoPedido || "-")}</strong></div>
+    <div class="kv"><span>PI</span><strong>${escapeHtml(row.piEstado || data.estadoFactura || "-")}</strong></div>
+    <div class="kv"><span>Auxiliar</span><strong>${escapeHtml(row.auxiliar || "-")}</strong></div>
+    <div class="kv"><span>Emision</span><strong>${escapeHtml(row.fechaEmision || "-")}</strong></div>
+  </div>`);
+
+  $("noteResults").innerHTML = `${table}${cards}`;
 }
 
 async function login(event) {
@@ -128,25 +197,66 @@ async function logout() {
   showApp(false);
 }
 
+async function callInventory(params) {
+  const res = await fetch(`${config.inventoryFunctionUrl}?${params}`, {
+    headers: {Authorization: `Bearer ${session.access_token}`},
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message || data.detail || `Error HTTP ${res.status}`);
+  }
+  return data;
+}
+
 async function search(event) {
   event.preventDefault();
   const query = $("skuInput").value.trim();
   if (!query || !session?.access_token) return;
   $("searchButton").disabled = true;
-  message("Consultando Panal...");
+  resetStockMetrics();
+  message("Consultando inventario...");
   try {
-    const params = new URLSearchParams({q: query, bodega: $("warehouseInput").value, limit: "180"});
-    const res = await fetch(`${config.inventoryFunctionUrl}?${params}`, {
-      headers: {Authorization: `Bearer ${session.access_token}`},
-    });
-    const data = await res.json();
-    render(data);
-    message(data.message || "Consulta lista.", data.ok ? "" : "error");
+    const params = new URLSearchParams({action: "stock", q: query, limit: "50"});
+    const data = await callInventory(params);
+    renderStock(data);
+    message(data.message || "Consulta lista.", "");
   } catch (error) {
+    $("results").innerHTML = `<div class="empty">${escapeHtml(error.message || "Error consultando inventario.")}</div>`;
     message(error.message || "Error consultando inventario.", "error");
   } finally {
     $("searchButton").disabled = false;
   }
+}
+
+async function searchNote(event) {
+  event.preventDefault();
+  const folio = $("noteInput").value.trim().replace(/[^\d]/g, "");
+  if (!folio || !session?.access_token) return;
+  $("noteButton").disabled = true;
+  resetNoteMetrics();
+  message("Consultando nota de venta...");
+  try {
+    const params = new URLSearchParams({action: "nota", folio});
+    const data = await callInventory(params);
+    renderNote(data);
+    message(data.message || "Consulta lista.", "");
+  } catch (error) {
+    $("noteResults").innerHTML = `<div class="empty">${escapeHtml(error.message || "Error consultando nota de venta.")}</div>`;
+    message(error.message || "Error consultando nota de venta.", "error");
+  } finally {
+    $("noteButton").disabled = false;
+  }
+}
+
+function switchTab(targetId) {
+  for (const button of document.querySelectorAll(".tabButton")) {
+    const active = button.dataset.tab === targetId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  }
+  $("stockView").hidden = targetId !== "stockView";
+  $("noteView").hidden = targetId !== "noteView";
+  message("");
 }
 
 const {data} = await supabase.auth.getSession();
@@ -162,3 +272,7 @@ if (session) {
 $("authForm").addEventListener("submit", login);
 $("logoutButton").addEventListener("click", logout);
 $("searchForm").addEventListener("submit", search);
+$("noteForm").addEventListener("submit", searchNote);
+for (const button of document.querySelectorAll(".tabButton")) {
+  button.addEventListener("click", () => switchTab(button.dataset.tab));
+}
