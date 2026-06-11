@@ -187,6 +187,17 @@ function facturaText(row) {
   return rowFacturas.length ? rowFacturas.join(", ") : "-";
 }
 
+function courierText(row) {
+  const courier = row.courier || {};
+  return courier.found ? courier.courier || "Avanza" : "-";
+}
+
+function courierDetail(row) {
+  const courier = row.courier || {};
+  if (!courier.found) return "";
+  return unique([courier.tracking, courier.estado, courier.fechaRegistro]).join(" / ");
+}
+
 function renderNote(data) {
   const rows = data.rows || [];
   const facturas = Array.isArray(data.facturas) ? data.facturas : [];
@@ -212,6 +223,7 @@ function renderNote(data) {
       {label: "Fechas"},
       {label: "Estado"},
       {label: "Factura"},
+      {label: "Courier"},
     ],
     rows,
     (row) => `<tr>
@@ -221,6 +233,7 @@ function renderNote(data) {
       <td><div>${escapeHtml(row.fechaEmision || "-")}</div><div class="desc">${escapeHtml(row.fechaCompromiso || "")}</div></td>
       <td><span class="pill ${/picking|despachar|terminado|completa/i.test(row.estadoPedido || "") ? "good" : "muted"}">${escapeHtml(row.estadoPedido || "-")}</span><div class="desc">${escapeHtml(row.piEstado || data.estadoFactura || "")}</div></td>
       <td><strong>${escapeHtml(facturaText(row))}</strong><div class="desc">${escapeHtml(unique([row.facturaTipo, row.facturaEstado]).join(" / "))}</div></td>
+      <td><strong>${escapeHtml(courierText(row))}</strong><div class="desc">${escapeHtml(courierDetail(row))}</div></td>
     </tr>`,
   );
 
@@ -228,8 +241,10 @@ function renderNote(data) {
     <div class="top"><div><div class="sku">Pedido ${escapeHtml(row.pedido || "-")}</div><div class="desc">N.Venta ${escapeHtml(row.folio || "-")}</div></div><strong>${escapeHtml(facturaText(row))}</strong></div>
     <div class="kv"><span>Estado</span><strong>${escapeHtml(row.estadoPedido || "-")}</strong></div>
     <div class="kv"><span>PI</span><strong>${escapeHtml(row.piEstado || data.estadoFactura || "-")}</strong></div>
+    <div class="kv"><span>Courier</span><strong>${escapeHtml(courierText(row))}</strong></div>
     <div class="kv"><span>Auxiliar</span><strong>${escapeHtml(row.auxiliar || "-")}</strong></div>
     <div class="kv"><span>Emision</span><strong>${escapeHtml(row.fechaEmision || "-")}</strong></div>
+    <div class="desc">${escapeHtml(courierDetail(row))}</div>
   </div>`);
 
   $("noteResults").innerHTML = `${table}${cards}`;
