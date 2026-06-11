@@ -56,8 +56,6 @@ td.strong { font-weight: 800; }
 .pill { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 800; background: #edf0ee; color: #4f5f6b; }
 .pill.good { background: #ddf3ea; color: #075e4a; }
 .pill.muted { background: #eef1f2; color: #5d6b78; }
-.flow { min-width: 190px; }
-.flow span { display: inline-flex; margin: 0 4px 4px 0; padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; color: #40515f; background: #fff; font-size: 12px; }
 .empty { padding: 28px 16px; color: var(--muted); }
 .cards { display: none; }
 [hidden] { display: none !important; }

@@ -58,11 +58,43 @@ function renderCards(rows, cardHtml) {
   return `<div class="cards">${rows.map(cardHtml).join("")}</div>`;
 }
 
+function groupStockRows(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const key = [row.sku, row.descripcion, row.lote || "-", row.vencimiento || "-"].join("\u001f");
+    if (!map.has(key)) {
+      map.set(key, {
+        sku: row.sku,
+        descripcion: row.descripcion,
+        lote: row.lote || "-",
+        vencimiento: row.vencimiento || "-",
+        stock: 0,
+        noDisponible: 0,
+        total: 0,
+        lineas: 0,
+        bodegasSet: new Set(),
+      });
+    }
+    const group = map.get(key);
+    group.stock += Number(row.stock || 0);
+    group.noDisponible += Number(row.noDisponible || 0);
+    group.total += Number(row.total || 0);
+    group.lineas += 1;
+    if (row.bodega) group.bodegasSet.add(row.bodega);
+  }
+  return Array.from(map.values())
+    .map((group) => ({
+      ...group,
+      bodegas: Array.from(group.bodegasSet).join(", "),
+    }))
+    .sort((a, b) => String(a.vencimiento).localeCompare(String(b.vencimiento)) || String(a.lote).localeCompare(String(b.lote)));
+}
+
 function resetStockMetrics() {
-  $("metricBodega1").textContent = "-";
-  $("metricBodega8").textContent = "-";
+  $("metricStockPanal").textContent = "-";
   $("metricNotasVenta").textContent = "-";
   $("metricDisponible").textContent = "-";
+  $("metricLineas").textContent = "-";
 }
 
 function resetNoteMetrics() {
@@ -74,13 +106,13 @@ function resetNoteMetrics() {
 
 function renderStock(data) {
   const rows = data.rows || [];
-  const totals = data.totals || {bodega1: 0, bodega8: 0, notasVenta: 0, disponible: 0};
-  $("metricBodega1").textContent = qty(totals.bodega1);
-  $("metricBodega8").textContent = qty(totals.bodega8);
+  const totals = data.totals || {stockPanal: 0, noDisponible: 0, totalPanal: 0, notasVenta: 0, disponible: 0};
+  $("metricStockPanal").textContent = qty(totals.stockPanal);
   $("metricNotasVenta").textContent = qty(totals.notasVenta);
   $("metricDisponible").textContent = signedQty(totals.disponible);
+  $("metricLineas").textContent = qty(rows.length);
   $("resultTitle").textContent = data.query ? `Inventario: ${data.query}` : "Inventario";
-  $("resultSubtitle").textContent = data.time ? `Ultima consulta: ${dateTime(data.time)}. Disponible = B1 + B8 - Notas de venta.` : "Disponible = Bodega 1 + Bodega 8 - Notas de venta.";
+  $("resultSubtitle").textContent = data.time ? `Ultima consulta: ${dateTime(data.time)}. Disponible = Stock Panal - Notas de venta.` : "Disponible = Stock Panal - Notas de venta.";
   $("resultCount").textContent = data.message || `${rows.length} productos.`;
 
   if (!rows.length) {
@@ -88,37 +120,66 @@ function renderStock(data) {
     return;
   }
 
-  const table = renderTable(
+  const groups = groupStockRows(rows);
+  const grouped = renderTable(
     [
       {label: "Producto"},
-      {label: "Laboratorio"},
-      {label: "Bodega 1", cls: "right"},
-      {label: "Bodega 8", cls: "right"},
-      {label: "Notas venta", cls: "right"},
-      {label: "Disponible", cls: "right"},
-      {label: "Estado"},
+      {label: "Lote"},
+      {label: "Vcto"},
+      {label: "Bodegas"},
+      {label: "Stock Panal", cls: "right"},
+      {label: "N.Disp", cls: "right"},
+      {label: "Total Panal", cls: "right"},
+      {label: "Lineas", cls: "right"},
+    ],
+    groups,
+    (row) => `<tr>
+      <td><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></td>
+      <td>${escapeHtml(row.lote || "-")}</td>
+      <td>${escapeHtml(row.vencimiento || "-")}</td>
+      <td>${escapeHtml(row.bodegas || "-")}</td>
+      <td class="right strong">${escapeHtml(qty(row.stock))}</td>
+      <td class="right">${escapeHtml(qty(row.noDisponible))}</td>
+      <td class="right">${escapeHtml(qty(row.total))}</td>
+      <td class="right">${escapeHtml(qty(row.lineas))}</td>
+    </tr>`,
+  );
+
+  const groupedCards = renderCards(groups, (row) => `<div class="item">
+    <div class="top"><div><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></div><strong>${escapeHtml(qty(row.stock))}</strong></div>
+    <div class="kv"><span>Lote</span><strong>${escapeHtml(row.lote || "-")}</strong></div>
+    <div class="kv"><span>Vcto</span><strong>${escapeHtml(row.vencimiento || "-")}</strong></div>
+    <div class="kv"><span>Bodegas</span><strong>${escapeHtml(row.bodegas || "-")}</strong></div>
+    <div class="kv"><span>Total Panal</span><strong>${escapeHtml(qty(row.total))}</strong></div>
+  </div>`);
+
+  const detail = renderTable(
+    [
+      {label: "Producto"},
+      {label: "Bodega"},
+      {label: "Ubicacion"},
+      {label: "Lote"},
+      {label: "Vcto"},
+      {label: "LPN"},
+      {label: "Stock Panal", cls: "right"},
+      {label: "N.Disp", cls: "right"},
+      {label: "Total Panal", cls: "right"},
     ],
     rows,
     (row) => `<tr>
       <td><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></td>
-      <td>${escapeHtml(row.laboratorio || "-")}</td>
-      <td class="right">${escapeHtml(qty(row.bodega1))}</td>
-      <td class="right">${escapeHtml(qty(row.bodega8))}</td>
-      <td class="right">${escapeHtml(qty(row.notasVenta))}</td>
-      <td class="right strong">${escapeHtml(signedQty(row.disponible))}</td>
-      <td><span class="pill ${Number(row.disponible || 0) > 0 ? "good" : "muted"}">${escapeHtml(row.stockEstado || "-")}</span></td>
+      <td>${escapeHtml(row.bodega || "-")}</td>
+      <td>${escapeHtml(row.ubicacion || "-")}</td>
+      <td>${escapeHtml(row.lote || "-")}</td>
+      <td>${escapeHtml(row.vencimiento || "-")}</td>
+      <td>${escapeHtml(row.lpn || "-")}</td>
+      <td class="right strong">${escapeHtml(qty(row.stock))}</td>
+      <td class="right">${escapeHtml(qty(row.noDisponible))}</td>
+      <td class="right">${escapeHtml(qty(row.total))}</td>
     </tr>`,
   );
 
-  const cards = renderCards(rows, (row) => `<div class="item">
-    <div class="top"><div><div class="sku">${escapeHtml(row.sku)}</div><div class="desc">${escapeHtml(row.descripcion)}</div></div><strong>${escapeHtml(signedQty(row.disponible))}</strong></div>
-    <div class="kv"><span>Laboratorio</span><strong>${escapeHtml(row.laboratorio || "-")}</strong></div>
-    <div class="kv"><span>Bodega 1</span><strong>${escapeHtml(qty(row.bodega1))}</strong></div>
-    <div class="kv"><span>Bodega 8</span><strong>${escapeHtml(qty(row.bodega8))}</strong></div>
-    <div class="kv"><span>Notas venta</span><strong>${escapeHtml(qty(row.notasVenta))}</strong></div>
-  </div>`);
-
-  $("results").innerHTML = `${table}${cards}`;
+  $("results").innerHTML = `<div class="sectionTitle">Stock Panal por lote y vencimiento</div>${grouped}${groupedCards}<div class="sectionTitle">Detalle por ubicacion</div>${detail}`;
 }
 
 function facturaText(row) {
@@ -149,7 +210,6 @@ function renderNote(data) {
       {label: "N.Venta"},
       {label: "Auxiliar"},
       {label: "Fechas"},
-      {label: "Flujo"},
       {label: "Estado"},
       {label: "Factura"},
     ],
@@ -159,7 +219,6 @@ function renderNote(data) {
       <td>${escapeHtml(row.folio || "-")}</td>
       <td><div>${escapeHtml(row.auxiliar || "-")}</div><div class="desc">${escapeHtml(row.autor || "")}</div></td>
       <td><div>${escapeHtml(row.fechaEmision || "-")}</div><div class="desc">${escapeHtml(row.fechaCompromiso || "")}</div></td>
-      <td class="flow">${["creacion", "picking", "control", "empaque", "despacho"].map((key) => `<span>${escapeHtml(row[key] || "-")}</span>`).join("")}</td>
       <td><span class="pill ${/picking|despachar|terminado|completa/i.test(row.estadoPedido || "") ? "good" : "muted"}">${escapeHtml(row.estadoPedido || "-")}</span><div class="desc">${escapeHtml(row.piEstado || data.estadoFactura || "")}</div></td>
       <td><strong>${escapeHtml(facturaText(row))}</strong><div class="desc">${escapeHtml(unique([row.facturaTipo, row.facturaEstado]).join(" / "))}</div></td>
     </tr>`,
