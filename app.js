@@ -198,6 +198,16 @@ function courierDetail(row) {
   return unique([courier.tracking, courier.estado, courier.fechaRegistro]).join(" / ");
 }
 
+function courierTimeline(row) {
+  const events = row.courier?.seguimiento?.eventos || [];
+  if (!events.length) return "";
+  return events
+    .slice(-4)
+    .map((event) => unique([event.estado, event.fecha]).join(" - "))
+    .filter(Boolean)
+    .join(" | ");
+}
+
 function renderNote(data) {
   const rows = data.rows || [];
   const facturas = Array.isArray(data.facturas) ? data.facturas : [];
@@ -233,7 +243,7 @@ function renderNote(data) {
       <td><div>${escapeHtml(row.fechaEmision || "-")}</div><div class="desc">${escapeHtml(row.fechaCompromiso || "")}</div></td>
       <td><span class="pill ${/picking|despachar|terminado|completa/i.test(row.estadoPedido || "") ? "good" : "muted"}">${escapeHtml(row.estadoPedido || "-")}</span><div class="desc">${escapeHtml(row.piEstado || data.estadoFactura || "")}</div></td>
       <td><strong>${escapeHtml(facturaText(row))}</strong><div class="desc">${escapeHtml(unique([row.facturaTipo, row.facturaEstado]).join(" / "))}</div></td>
-      <td><strong>${escapeHtml(courierText(row))}</strong><div class="desc">${escapeHtml(courierDetail(row))}</div></td>
+      <td><strong>${escapeHtml(courierText(row))}</strong><div class="desc">${escapeHtml(courierDetail(row))}</div><div class="timeline">${escapeHtml(courierTimeline(row))}</div></td>
     </tr>`,
   );
 
@@ -245,6 +255,7 @@ function renderNote(data) {
     <div class="kv"><span>Auxiliar</span><strong>${escapeHtml(row.auxiliar || "-")}</strong></div>
     <div class="kv"><span>Emision</span><strong>${escapeHtml(row.fechaEmision || "-")}</strong></div>
     <div class="desc">${escapeHtml(courierDetail(row))}</div>
+    <div class="timeline">${escapeHtml(courierTimeline(row))}</div>
   </div>`);
 
   $("noteResults").innerHTML = `${table}${cards}`;
@@ -271,12 +282,54 @@ async function logout() {
   showApp(false);
 }
 
+async function handleExpiredSession() {
+  await supabase.auth.signOut();
+  session = null;
+  setStatus(false, "Sesion vencida");
+  showApp(false);
+}
+
+async function getActiveSession() {
+  const {data, error} = await supabase.auth.getSession();
+  if (error || !data.session) {
+    await handleExpiredSession();
+    throw new Error("Sesion vencida. Ingresa nuevamente.");
+  }
+
+  session = data.session;
+  const expiresAt = Number(session.expires_at || 0) * 1000;
+  if (expiresAt && expiresAt - Date.now() < 60000) {
+    const refreshed = await supabase.auth.refreshSession();
+    if (refreshed.error || !refreshed.data.session) {
+      await handleExpiredSession();
+      throw new Error("Sesion vencida. Ingresa nuevamente.");
+    }
+    session = refreshed.data.session;
+  }
+
+  setStatus(true, session.user.email);
+  showApp(true);
+  return session;
+}
+
 async function callInventory(params) {
+  const activeSession = await getActiveSession();
   const res = await fetch(`${config.inventoryFunctionUrl}?${params}`, {
-    headers: {Authorization: `Bearer ${session.access_token}`},
+    headers: {Authorization: `Bearer ${activeSession.access_token}`},
   });
-  const data = await res.json().catch(() => ({}));
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {message: raw};
+  }
   if (!res.ok || data.ok === false) {
+    const messageText = String(data.message || data.detail || raw || "");
+    if (res.status === 401 || /invalid jwt|jwt|sesion|session/i.test(messageText)) {
+      await handleExpiredSession();
+      throw new Error("Sesion vencida. Ingresa nuevamente.");
+    }
     throw new Error(data.message || data.detail || `Error HTTP ${res.status}`);
   }
   return data;
@@ -333,11 +386,23 @@ function switchTab(targetId) {
   message("");
 }
 
+supabase.auth.onAuthStateChange((_event, currentSession) => {
+  session = currentSession;
+  if (session) {
+    setStatus(true, session.user.email);
+    showApp(true);
+  }
+});
+
 const {data} = await supabase.auth.getSession();
 session = data.session;
 if (session) {
-  setStatus(true, session.user.email);
-  showApp(true);
+  try {
+    await getActiveSession();
+  } catch {
+    setStatus(false, "Pendiente ingreso");
+    showApp(false);
+  }
 } else {
   setStatus(false, "Pendiente ingreso");
   showApp(false);
