@@ -39,7 +39,7 @@
     <section id="appPanel" hidden>
       <nav class="tabs" aria-label="Modulos">
         <button class="tabButton active" type="button" data-tab="stockView">Inventario</button>
-        <button class="tabButton" type="button" data-tab="noteView">Nota de venta</button>
+        <button class="tabButton" type="button" data-tab="noteView">Nota / Factura</button>
       </nav>
 
       <p id="message"></p>
@@ -76,9 +76,16 @@
 
       <section id="noteView" hidden>
         <section class="panel search">
-          <form id="noteForm">
+          <form id="noteForm" class="noteQueryForm">
             <label>
-              Numero nota de venta
+              Buscar por
+              <select id="noteSearchType">
+                <option value="nota">N.Venta</option>
+                <option value="factura">Factura</option>
+              </select>
+            </label>
+            <label>
+              Numero
               <input id="noteInput" inputmode="numeric" autocomplete="off" placeholder="Ej: 472589" required>
             </label>
             <button class="primary" id="noteButton" type="submit">Consultar</button>
@@ -96,7 +103,7 @@
           <div class="resultsHead">
             <div>
               <h2 id="noteTitle">Nota de venta</h2>
-              <p id="noteSubtitle">Ingresa una N.Venta para ver estado y factura si existe.</p>
+              <p id="noteSubtitle">Ingresa una N.Venta o factura para ver estado y detalle.</p>
             </div>
             <span id="noteCount"></span>
           </div>

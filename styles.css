@@ -35,6 +35,7 @@ button:disabled { opacity: .65; cursor: wait; }
 #statusDot.ok { background: #16855f; }
 #statusText { font-size: 13px; color: #40515f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
 .search form { grid-template-columns: minmax(220px, 1fr) auto; padding: 14px; align-items: end; }
+.search form.noteQueryForm { grid-template-columns: 180px minmax(220px, 1fr) auto; }
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); background: #eef5f1; border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
 .metrics div { padding: 14px 16px; border-right: 1px solid var(--line); }
 .metrics div:last-child { border-right: 0; }
@@ -73,6 +74,7 @@ td.strong { font-weight: 800; }
   .auth { margin: 20px auto; }
   .tabs { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
   .search form { grid-template-columns: 1fr; }
+  .search form.noteQueryForm { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .metrics div:nth-child(2) { border-right: 0; }
   .metrics div:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }

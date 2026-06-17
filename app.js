@@ -296,12 +296,18 @@ function renderNoteProductSections(data) {
 function renderNote(data) {
   const rows = data.rows || [];
   const facturas = Array.isArray(data.facturas) ? data.facturas : [];
+  const isFacturaSearch = data.searchMode === "factura" || data.searchBy === "factura";
+  const facturaBuscada = data.facturaBuscada || data.requestedFolio || "";
   $("noteMetricEstado").textContent = data.estadoPedido || "-";
   $("noteMetricFactura").textContent = facturas.length ? facturas.join(", ") : "-";
   $("noteMetricPiOk").textContent = qty(data.piCompletas);
   $("noteMetricPiPending").textContent = qty(data.piPendientes);
-  $("noteTitle").textContent = data.folio ? `Nota de venta: ${data.folio}` : "Nota de venta";
-  const mode = data.searchMode === "pedido" ? "Busqueda por numero de pedido." : "Busqueda por folio de N.Venta.";
+  $("noteTitle").textContent = isFacturaSearch
+    ? `Factura: ${facturaBuscada || "-"}${data.folio ? ` / N.Venta: ${data.folio}` : ""}`
+    : (data.folio ? `Nota de venta: ${data.folio}` : "Nota de venta");
+  const mode = isFacturaSearch
+    ? "Busqueda por factura."
+    : (data.searchMode === "pedido" ? "Busqueda por numero de pedido." : "Busqueda por folio de N.Venta.");
   $("noteSubtitle").textContent = data.time ? `${mode} Ultima consulta: ${dateTime(data.time)}.` : mode;
   $("noteCount").textContent = data.message || `${rows.length} pedidos.`;
 
@@ -443,12 +449,13 @@ async function search(event) {
 async function searchNote(event) {
   event.preventDefault();
   const folio = $("noteInput").value.trim().replace(/[^\d]/g, "");
+  const searchBy = $("noteSearchType").value === "factura" ? "factura" : "nota";
   if (!folio || !session?.access_token) return;
   $("noteButton").disabled = true;
   resetNoteMetrics();
-  message("Consultando nota de venta...");
+  message(searchBy === "factura" ? "Consultando factura..." : "Consultando nota de venta...");
   try {
-    const params = new URLSearchParams({action: "nota", folio});
+    const params = new URLSearchParams({action: "nota", folio, searchBy});
     const data = await callInventory(params);
     renderNote(data);
     message(data.message || "Consulta lista.", "");
@@ -458,6 +465,12 @@ async function searchNote(event) {
   } finally {
     $("noteButton").disabled = false;
   }
+}
+
+function updateNoteSearchType() {
+  const isFactura = $("noteSearchType").value === "factura";
+  $("noteInput").placeholder = isFactura ? "Ej: 400476" : "Ej: 472589";
+  $("noteInput").setAttribute("aria-label", isFactura ? "Numero factura" : "Numero nota de venta");
 }
 
 function switchTab(targetId) {
@@ -497,6 +510,8 @@ $("authForm").addEventListener("submit", login);
 $("logoutButton").addEventListener("click", logout);
 $("searchForm").addEventListener("submit", search);
 $("noteForm").addEventListener("submit", searchNote);
+$("noteSearchType").addEventListener("change", updateNoteSearchType);
+updateNoteSearchType();
 for (const button of document.querySelectorAll(".tabButton")) {
   button.addEventListener("click", () => switchTab(button.dataset.tab));
 }
