@@ -24,6 +24,11 @@ const signedQty = (value) => {
   return num.toLocaleString("es-CL");
 };
 
+const money = (value) => {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num.toLocaleString("es-CL", {maximumFractionDigits: 0}) : String(value || "");
+};
+
 const dateTime = (value) => {
   if (!value) return "";
   const parsed = new Date(value);
@@ -208,6 +213,86 @@ function courierTimeline(row) {
     .join(" | ");
 }
 
+function collectProducts(data, topLevelKey, rowKey) {
+  const topLevel = Array.isArray(data[topLevelKey]) ? data[topLevelKey] : [];
+  if (topLevel.length) return topLevel;
+  return (data.rows || []).flatMap((row) => Array.isArray(row[rowKey]) ? row[rowKey] : []);
+}
+
+function renderNoteProductSections(data) {
+  const productosNota = collectProducts(data, "productosNota", "productos");
+  const productosFacturados = collectProducts(data, "productosFacturados", "productosFacturados");
+
+  const notaTable = productosNota.length ? renderTable(
+    [
+      {label: "N.Venta"},
+      {label: "SKU"},
+      {label: "Producto"},
+      {label: "Pedida", cls: "right"},
+      {label: "Asignada", cls: "right"},
+      {label: "Ubicacion"},
+      {label: "Lote"},
+      {label: "Vcto"},
+      {label: "LPN"},
+    ],
+    productosNota,
+    (row) => `<tr>
+      <td>${escapeHtml(row.folio || row.pedido || "-")}</td>
+      <td><div class="sku">${escapeHtml(row.sku || "-")}</div></td>
+      <td>${escapeHtml(row.descripcion || "-")}</td>
+      <td class="right">${escapeHtml(qty(row.cantidadPedida))}</td>
+      <td class="right strong">${escapeHtml(qty(row.cantidadAsignada))}</td>
+      <td>${escapeHtml(row.ubicacion || "-")}</td>
+      <td>${escapeHtml(row.lote || "-")}</td>
+      <td>${escapeHtml(row.vencimiento || "-")}</td>
+      <td>${escapeHtml(row.lpn || "-")}</td>
+    </tr>`,
+  ) : `<div class="empty">Panal no entrego detalle de productos para esta nota.</div>`;
+
+  const notaCards = productosNota.length ? renderCards(productosNota, (row) => `<div class="item">
+    <div class="top"><div><div class="sku">${escapeHtml(row.sku || "-")}</div><div class="desc">${escapeHtml(row.descripcion || "-")}</div></div><strong>${escapeHtml(qty(row.cantidadAsignada))}</strong></div>
+    <div class="kv"><span>N.Venta</span><strong>${escapeHtml(row.folio || row.pedido || "-")}</strong></div>
+    <div class="kv"><span>Pedida</span><strong>${escapeHtml(qty(row.cantidadPedida))}</strong></div>
+    <div class="kv"><span>Lote</span><strong>${escapeHtml(row.lote || "-")}</strong></div>
+    <div class="kv"><span>Vcto</span><strong>${escapeHtml(row.vencimiento || "-")}</strong></div>
+    <div class="kv"><span>Ubicacion</span><strong>${escapeHtml(row.ubicacion || "-")}</strong></div>
+  </div>`) : "";
+
+  const facturadosTable = productosFacturados.length ? renderTable(
+    [
+      {label: "Factura"},
+      {label: "N.Venta"},
+      {label: "SKU"},
+      {label: "Producto"},
+      {label: "Cant.", cls: "right"},
+      {label: "Precio", cls: "right"},
+      {label: "Desc.", cls: "right"},
+      {label: "Total", cls: "right"},
+    ],
+    productosFacturados,
+    (row) => `<tr>
+      <td><strong>${escapeHtml(row.factura || "-")}</strong><div class="desc">${escapeHtml(row.tipo || "")}</div></td>
+      <td>${escapeHtml(row.folio || row.pedido || "-")}</td>
+      <td><div class="sku">${escapeHtml(row.sku || "-")}</div></td>
+      <td>${escapeHtml(row.descripcion || "-")}<div class="desc">${escapeHtml(unique([row.unidad, row.correlativo ? `Linea ${row.correlativo}` : ""]).join(" / "))}</div></td>
+      <td class="right strong">${escapeHtml(qty(row.cantidad))}</td>
+      <td class="right">${escapeHtml(money(row.precio))}</td>
+      <td class="right">${escapeHtml(money(row.descuento))}</td>
+      <td class="right strong">${escapeHtml(money(row.totalLinea))}</td>
+    </tr>`,
+  ) : `<div class="empty">No encontre productos facturados para esta nota.</div>`;
+
+  const facturadosCards = productosFacturados.length ? renderCards(productosFacturados, (row) => `<div class="item">
+    <div class="top"><div><div class="sku">${escapeHtml(row.sku || "-")}</div><div class="desc">${escapeHtml(row.descripcion || "-")}</div></div><strong>${escapeHtml(qty(row.cantidad))}</strong></div>
+    <div class="kv"><span>Factura</span><strong>${escapeHtml(row.factura || "-")}</strong></div>
+    <div class="kv"><span>N.Venta</span><strong>${escapeHtml(row.folio || row.pedido || "-")}</strong></div>
+    <div class="kv"><span>Precio</span><strong>${escapeHtml(money(row.precio))}</strong></div>
+    <div class="kv"><span>Total</span><strong>${escapeHtml(money(row.totalLinea))}</strong></div>
+  </div>`) : "";
+
+  return `<div class="sectionTitle">Productos de la nota de venta</div>${notaTable}${notaCards}<div class="sectionTitle">Productos facturados</div>${facturadosTable}${facturadosCards}`;
+}
+
 function renderNote(data) {
   const rows = data.rows || [];
   const facturas = Array.isArray(data.facturas) ? data.facturas : [];
@@ -258,7 +343,7 @@ function renderNote(data) {
     <div class="timeline">${escapeHtml(courierTimeline(row))}</div>
   </div>`);
 
-  $("noteResults").innerHTML = `${table}${cards}`;
+  $("noteResults").innerHTML = `${table}${cards}${renderNoteProductSections(data)}`;
 }
 
 async function login(event) {
