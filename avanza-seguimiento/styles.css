@@ -21,7 +21,6 @@ main { width: min(1120px, calc(100% - 32px)); margin: 20px auto 32px; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; box-shadow: 0 1px 4px rgba(0, 0, 0, .16); }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
-.auth { max-width: 460px; margin: 56px auto; padding: 22px; }
 .session { display: flex; align-items: center; gap: 10px; min-width: 0; }
 #statusDot { width: 9px; height: 9px; border-radius: 50%; background: #9aa5ad; flex: 0 0 auto; }
 #statusDot.ok { background: #16855f; }
@@ -70,7 +69,6 @@ th { font-size: 12px; color: #4a5e6e; text-transform: uppercase; background: #fb
   header { padding: 12px 14px; align-items: flex-start; }
   h1 { font-size: 17px; }
   main { width: calc(100% - 20px); margin-top: 12px; }
-  .auth { margin: 20px auto; }
   #statusText { max-width: 150px; }
   .searchPanel form, .statusGrid, .detailGrid { grid-template-columns: 1fr; }
   .resultsHead { display: block; }
