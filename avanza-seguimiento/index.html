@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avanza Seguimiento</title>
+  <link rel="icon" href="./assets/avanza.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="./assets/avanza.svg" alt="">
+      <div>
+        <h1>Avanza Seguimiento</h1>
+        <p>Consulta por nota de venta</p>
+      </div>
+    </div>
+    <div class="session">
+      <span id="statusDot"></span>
+      <span id="statusText">Cargando</span>
+      <button id="logoutButton" type="button" hidden>Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel auth" id="authPanel">
+      <h2>Ingresar</h2>
+      <form id="authForm">
+        <label>
+          Correo
+          <input id="emailInput" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          Contrasena
+          <input id="passwordInput" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <section id="appPanel" hidden>
+      <section class="panel searchPanel">
+        <form id="searchForm">
+          <label>
+            Nota de venta
+            <input id="folioInput" inputmode="numeric" autocomplete="off" placeholder="Ej: 473063" required>
+          </label>
+          <button class="primary" id="searchButton" type="submit">Consultar</button>
+        </form>
+      </section>
+
+      <p id="message"></p>
+
+      <section class="statusGrid">
+        <article class="statusCard">
+          <span>Estado actual</span>
+          <strong id="metricEstado">-</strong>
+        </article>
+        <article class="statusCard">
+          <span>Tracking</span>
+          <strong id="metricTracking">-</strong>
+        </article>
+        <article class="statusCard">
+          <span>Destino</span>
+          <strong id="metricDestino">-</strong>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="resultsHead">
+          <div>
+            <h2 id="resultTitle">Seguimiento Avanza</h2>
+            <p id="resultSubtitle">Ingresa una nota de venta para consultar.</p>
+          </div>
+          <span id="resultCount"></span>
+        </div>
+        <div id="results" class="empty">Sin consulta.</div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
