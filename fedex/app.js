@@ -22,7 +22,7 @@ function isoDate(date) {
 function setDefaultDates() {
   const today = new Date();
   const from = new Date(today);
-  from.setDate(today.getDate() - 45);
+  from.setDate(today.getDate() - 30);
   $("fromInput").value = isoDate(from);
   $("toInput").value = isoDate(today);
 }
