@@ -18,29 +18,13 @@
       </div>
     </div>
     <div class="session">
-      <span id="statusDot"></span>
-      <span id="statusText">Cargando</span>
-      <button id="logoutButton" type="button" hidden>Salir</button>
+      <span id="statusDot" class="ok"></span>
+      <span id="statusText">Consulta libre</span>
     </div>
   </header>
 
   <main>
-    <section class="panel auth" id="authPanel">
-      <h2>Ingresar</h2>
-      <form id="authForm">
-        <label>
-          Correo
-          <input id="emailInput" type="email" autocomplete="username" required>
-        </label>
-        <label>
-          Contrasena
-          <input id="passwordInput" type="password" autocomplete="current-password" required>
-        </label>
-        <button class="primary" type="submit">Entrar</button>
-      </form>
-    </section>
-
-    <section id="appPanel" hidden>
+    <section id="appPanel">
       <section class="panel searchPanel">
         <form id="searchForm">
           <label>

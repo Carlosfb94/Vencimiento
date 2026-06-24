@@ -1,9 +1,5 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
 const config = window.LLACOLEN_CONFIG || {};
-const supabase = createClient(config.supabaseUrl || "", config.supabaseAnonKey || "");
 const $ = (id) => document.getElementById(id);
-let session = null;
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -26,17 +22,6 @@ function dateTime(value) {
   return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("es-CL");
 }
 
-function setStatus(ok, text) {
-  $("statusDot").className = ok ? "ok" : "";
-  $("statusText").textContent = text;
-}
-
-function showApp(show) {
-  $("authPanel").hidden = show;
-  $("appPanel").hidden = !show;
-  $("logoutButton").hidden = !show;
-}
-
 function message(text, type = "") {
   $("message").textContent = text || "";
   $("message").className = type;
@@ -48,42 +33,9 @@ function resetMetrics() {
   $("metricDestino").textContent = "-";
 }
 
-async function handleExpiredSession() {
-  await supabase.auth.signOut();
-  session = null;
-  setStatus(false, "Sesion vencida");
-  showApp(false);
-}
-
-async function getActiveSession() {
-  const {data, error} = await supabase.auth.getSession();
-  if (error || !data.session) {
-    await handleExpiredSession();
-    throw new Error("Sesion vencida. Ingresa nuevamente.");
-  }
-
-  session = data.session;
-  const expiresAt = Number(session.expires_at || 0) * 1000;
-  if (expiresAt && expiresAt - Date.now() < 60000) {
-    const refreshed = await supabase.auth.refreshSession();
-    if (refreshed.error || !refreshed.data.session) {
-      await handleExpiredSession();
-      throw new Error("Sesion vencida. Ingresa nuevamente.");
-    }
-    session = refreshed.data.session;
-  }
-
-  setStatus(true, session.user.email);
-  showApp(true);
-  return session;
-}
-
 async function callAvanza(folio) {
-  const activeSession = await getActiveSession();
-  const params = new URLSearchParams({action: "avanza", folio});
-  const res = await fetch(`${config.inventoryFunctionUrl}?${params}`, {
-    headers: {Authorization: `Bearer ${activeSession.access_token}`},
-  });
+  const params = new URLSearchParams({folio});
+  const res = await fetch(`${config.avanzaFunctionUrl}?${params}`);
   const raw = await res.text();
   let data = {};
   try {
@@ -92,11 +44,6 @@ async function callAvanza(folio) {
     data = {message: raw};
   }
   if (!res.ok || data.ok === false) {
-    const messageText = String(data.message || data.detail || raw || "");
-    if (res.status === 401 || /invalid jwt|jwt|sesion|session/i.test(messageText)) {
-      await handleExpiredSession();
-      throw new Error("Sesion vencida. Ingresa nuevamente.");
-    }
     throw new Error(data.message || data.detail || `Error HTTP ${res.status}`);
   }
   return data;
@@ -104,7 +51,7 @@ async function callAvanza(folio) {
 
 function currentLocation(courier) {
   const seguimiento = courier?.seguimiento || {};
-  return unique([seguimiento.direccion, seguimiento.comuna]).join(", ") || courier?.destino || "";
+  return unique([seguimiento.comuna, courier?.destino]).join(", ");
 }
 
 function currentStatus(courier) {
@@ -175,47 +122,22 @@ function renderResult(data) {
     </div>
     <div class="detailGrid">
       <div class="detail"><span>Tracking</span><strong>${escapeHtml(fallback(courier.tracking))}</strong></div>
-      <div class="detail"><span>Destinatario</span><strong>${escapeHtml(fallback(seguimiento.destinatario))}</strong></div>
-      <div class="detail"><span>Direccion</span><strong>${escapeHtml(fallback(location))}</strong></div>
+      <div class="detail"><span>Destino</span><strong>${escapeHtml(fallback(location))}</strong></div>
       <div class="detail"><span>Registro</span><strong>${escapeHtml(unique([courier.fechaRegistro, courier.horaRegistro]).join(" ") || "-")}</strong></div>
       <div class="detail"><span>Referencia</span><strong>${escapeHtml(fallback(courier.referencia1 || seguimiento.referencia1))}</strong></div>
       <div class="detail"><span>Busqueda</span><strong>${escapeHtml(fallback(searched))}</strong></div>
     </div>
     <div class="detail"><span>Observacion</span><strong>${escapeHtml(fallback(courier.observacion))}</strong></div>
-    ${data.panalEstado ? `<div class="detail"><span>Estado Panal</span><strong>${escapeHtml(data.panalEstado)}</strong></div>` : ""}
-    ${data.panalError ? `<p class="muted">${escapeHtml(data.panalError)}</p>` : ""}
   </div>
   <div class="sectionTitle">Linea de tiempo</div>
   ${renderTimeline(events)}
   ${renderRows(rows)}`;
 }
 
-async function login(event) {
-  event.preventDefault();
-  const email = $("emailInput").value.trim().toLowerCase();
-  const password = $("passwordInput").value;
-  const {data, error} = await supabase.auth.signInWithPassword({email, password});
-  if (error) {
-    alert(error.message || "No pude iniciar sesion.");
-    return;
-  }
-  session = data.session;
-  setStatus(true, email);
-  showApp(true);
-}
-
-async function logout() {
-  await supabase.auth.signOut();
-  session = null;
-  resetMetrics();
-  setStatus(false, "Pendiente ingreso");
-  showApp(false);
-}
-
 async function search(event) {
   event.preventDefault();
   const folio = $("folioInput").value.trim().replace(/[^\d]/g, "");
-  if (!folio || !session?.access_token) return;
+  if (!folio) return;
   $("searchButton").disabled = true;
   resetMetrics();
   $("resultTitle").textContent = `N.Venta ${folio}`;
@@ -235,28 +157,4 @@ async function search(event) {
   }
 }
 
-supabase.auth.onAuthStateChange((_event, currentSession) => {
-  session = currentSession;
-  if (session) {
-    setStatus(true, session.user.email);
-    showApp(true);
-  }
-});
-
-const {data} = await supabase.auth.getSession();
-session = data.session;
-if (session) {
-  try {
-    await getActiveSession();
-  } catch {
-    setStatus(false, "Pendiente ingreso");
-    showApp(false);
-  }
-} else {
-  setStatus(false, "Pendiente ingreso");
-  showApp(false);
-}
-
-$("authForm").addEventListener("submit", login);
-$("logoutButton").addEventListener("click", logout);
 $("searchForm").addEventListener("submit", search);
