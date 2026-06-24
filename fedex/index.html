@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fedex Consulta</title>
+  <link rel="icon" href="./assets/fedex.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="./assets/fedex.svg" alt="">
+      <div>
+        <h1>Fedex Consulta</h1>
+        <p>Consulta por factura</p>
+      </div>
+    </div>
+    <div class="session">
+      <span id="statusDot" class="ok"></span>
+      <span id="statusText">Busqueda FedEx</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel searchPanel">
+      <form id="searchForm">
+        <label>
+          Factura
+          <input id="invoiceInput" autocomplete="off" placeholder="Ej: 400596" required>
+        </label>
+        <label>
+          Desde
+          <input id="fromInput" type="date" required>
+        </label>
+        <label>
+          Hasta
+          <input id="toInput" type="date" required>
+        </label>
+        <button class="primary" id="searchButton" type="submit">Consultar</button>
+      </form>
+    </section>
+
+    <p id="message"></p>
+
+    <section class="statusGrid">
+      <article class="statusCard">
+        <span>Estado principal</span>
+        <strong id="metricEstado">-</strong>
+      </article>
+      <article class="statusCard">
+        <span>Envios encontrados</span>
+        <strong id="metricCount">-</strong>
+      </article>
+      <article class="statusCard">
+        <span>Ultimo movimiento</span>
+        <strong id="metricLast">-</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="resultsHead">
+        <div>
+          <h2 id="resultTitle">Seguimiento FedEx</h2>
+          <p id="resultSubtitle">Ingresa una factura para consultar.</p>
+        </div>
+        <span id="resultCount"></span>
+      </div>
+      <div id="results" class="empty">Sin consulta.</div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
