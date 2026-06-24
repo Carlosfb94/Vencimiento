@@ -41,11 +41,10 @@ function message(text, type = "") {
 function resetMetrics() {
   $("metricEstado").textContent = "-";
   $("metricCount").textContent = "-";
-  $("metricLast").textContent = "-";
+  $("metricReference").textContent = "-";
 }
 
-async function callFedex(invoice, from, to) {
-  const params = new URLSearchParams({invoice, from, to});
+async function fetchJson(params) {
   const res = await fetch(`${config.fedexFunctionUrl}?${params}`);
   const raw = await res.text();
   let data = {};
@@ -60,6 +59,14 @@ async function callFedex(invoice, from, to) {
   return data;
 }
 
+function callFedexInvoice(invoice, from, to) {
+  return fetchJson(new URLSearchParams({type: "invoice", invoice, from, to}));
+}
+
+function callFedexTracking(tracking) {
+  return fetchJson(new URLSearchParams({type: "tracking", tracking}));
+}
+
 function renderEvents(events) {
   if (!events.length) return `<div class="empty">FedEx no entrego eventos de seguimiento para este envio.</div>`;
   return `<div class="timeline">${events.map((event) => `<div class="event">
@@ -69,9 +76,10 @@ function renderEvents(events) {
   </div>`).join("")}</div>`;
 }
 
-function renderShipments(shipments) {
+function renderShipments(shipments, mode) {
   if (!shipments.length) {
-    return `<div class="empty">No encontre envios FedEx para esa factura en el rango seleccionado.</div>`;
+    const label = mode === "tracking" ? "tracking" : "factura";
+    return `<div class="empty">No encontre envios FedEx para ese ${label}.</div>`;
   }
   return shipments.map((shipment, index) => `<article class="shipment">
     <div class="shipmentHead">
@@ -83,9 +91,11 @@ function renderShipments(shipments) {
     </div>
     <div class="detailGrid">
       <div class="detail"><span>Tracking</span><strong>${escapeHtml(fallback(shipment.trackingNumber))}</strong></div>
+      <div class="detail"><span>Factura</span><strong>${escapeHtml(fallback(shipment.invoiceNumber))}</strong></div>
       <div class="detail"><span>Estado</span><strong>${escapeHtml(fallback(shipment.status))}</strong></div>
       <div class="detail"><span>Destino</span><strong>${escapeHtml(fallback(shipment.destination))}</strong></div>
       <div class="detail"><span>Entrega estimada</span><strong>${escapeHtml(fallback(dateTime(shipment.estimatedDelivery)))}</strong></div>
+      <div class="detail"><span>Orden compra</span><strong>${escapeHtml(fallback(shipment.purchaseOrder))}</strong></div>
     </div>
     <div class="sectionTitle">Linea de tiempo</div>
     ${renderEvents(Array.isArray(shipment.events) ? shipment.events : [])}
@@ -95,30 +105,35 @@ function renderShipments(shipments) {
 function renderResult(data) {
   const shipments = Array.isArray(data.shipments) ? data.shipments : [];
   const first = shipments[0] || {};
-  $("resultTitle").textContent = data.invoice ? `Factura ${data.invoice}` : "Seguimiento FedEx";
+  const mode = data.tracking ? "tracking" : "invoice";
+  $("resultTitle").textContent = data.tracking ? `Tracking ${data.tracking}` : data.invoice ? `Factura ${data.invoice}` : "Seguimiento FedEx";
   $("resultSubtitle").textContent = data.time ? `Ultima consulta: ${dateTime(data.time)}` : "Consulta FedEx.";
   $("resultCount").textContent = data.message || "";
   $("metricEstado").textContent = fallback(first.status);
   $("metricCount").textContent = String(shipments.length || 0);
-  $("metricLast").textContent = fallback(first.lastEvent || first.destination);
-  $("results").innerHTML = renderShipments(shipments);
+  $("metricReference").textContent = fallback(first.invoiceNumber || first.purchaseOrder || first.lastEvent);
+  $("results").innerHTML = renderShipments(shipments, mode);
 }
 
 async function search(event) {
   event.preventDefault();
-  const invoice = $("invoiceInput").value.trim();
+  const searchType = $("searchType").value;
+  const query = $("queryInput").value.trim();
   const from = $("fromInput").value;
   const to = $("toInput").value;
-  if (!invoice || !from || !to) return;
+  if (!query) return;
+  if (searchType === "invoice" && (!from || !to)) return;
   $("searchButton").disabled = true;
   resetMetrics();
-  $("resultTitle").textContent = `Factura ${invoice}`;
+  $("resultTitle").textContent = searchType === "tracking" ? `Tracking ${query}` : `Factura ${query}`;
   $("resultSubtitle").textContent = "Consultando FedEx...";
   $("resultCount").textContent = "";
   $("results").innerHTML = `<div class="empty">Consultando seguimiento...</div>`;
   message("Consultando FedEx...");
   try {
-    const data = await callFedex(invoice, from, to);
+    const data = searchType === "tracking"
+      ? await callFedexTracking(query)
+      : await callFedexInvoice(query, from, to);
     renderResult(data);
     message(data.message || "Consulta lista.", data.found ? "" : "error");
   } catch (error) {
@@ -129,5 +144,16 @@ async function search(event) {
   }
 }
 
+function syncSearchMode() {
+  const byTracking = $("searchType").value === "tracking";
+  $("queryInput").placeholder = byTracking ? "Ej: 873407576413" : "Ej: 401215";
+  $("fromLabel").hidden = byTracking;
+  $("toLabel").hidden = byTracking;
+  $("fromInput").required = !byTracking;
+  $("toInput").required = !byTracking;
+}
+
 setDefaultDates();
+$("searchType").addEventListener("change", syncSearchMode);
 $("searchForm").addEventListener("submit", search);
+syncSearchMode();

@@ -14,7 +14,7 @@
       <img src="./assets/fedex.svg" alt="">
       <div>
         <h1>Fedex Consulta</h1>
-        <p>Consulta por factura</p>
+        <p>Consulta por factura o tracking</p>
       </div>
     </div>
     <div class="session">
@@ -27,14 +27,21 @@
     <section class="panel searchPanel">
       <form id="searchForm">
         <label>
-          Factura
-          <input id="invoiceInput" autocomplete="off" placeholder="Ej: 400596" required>
+          Buscar por
+          <select id="searchType">
+            <option value="invoice">Factura</option>
+            <option value="tracking">Tracking</option>
+          </select>
         </label>
         <label>
+          Numero
+          <input id="queryInput" autocomplete="off" placeholder="Ej: 401215" required>
+        </label>
+        <label id="fromLabel">
           Desde
           <input id="fromInput" type="date" required>
         </label>
-        <label>
+        <label id="toLabel">
           Hasta
           <input id="toInput" type="date" required>
         </label>
@@ -54,8 +61,8 @@
         <strong id="metricCount">-</strong>
       </article>
       <article class="statusCard">
-        <span>Ultimo movimiento</span>
-        <strong id="metricLast">-</strong>
+        <span>Factura / referencia</span>
+        <strong id="metricReference">-</strong>
       </article>
     </section>
 
@@ -63,7 +70,7 @@
       <div class="resultsHead">
         <div>
           <h2 id="resultTitle">Seguimiento FedEx</h2>
-          <p id="resultSubtitle">Ingresa una factura para consultar.</p>
+          <p id="resultSubtitle">Ingresa una factura o tracking para consultar.</p>
         </div>
         <span id="resultCount"></span>
       </div>
