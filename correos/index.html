@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Correos Consulta</title>
+  <link rel="icon" href="./assets/correos.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="./assets/correos.svg" alt="">
+      <div>
+        <h1>Correos Consulta</h1>
+        <p>Busqueda por factura</p>
+      </div>
+    </div>
+    <div class="session">
+      <span id="statusDot" class="ok"></span>
+      <span id="statusText">API Correos activa</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel searchPanel">
+      <form id="searchForm">
+        <label>
+          Factura
+          <input id="queryInput" autocomplete="off" placeholder="Ej: F-387501" required>
+        </label>
+        <button class="primary" id="searchButton" type="submit">Consultar</button>
+      </form>
+    </section>
+
+    <p id="message"></p>
+
+    <section class="statusGrid">
+      <article class="statusCard">
+        <span>Estado principal</span>
+        <strong id="metricEstado">-</strong>
+      </article>
+      <article class="statusCard">
+        <span>Tracking</span>
+        <strong id="metricTracking">-</strong>
+      </article>
+      <article class="statusCard">
+        <span>Fecha entrega</span>
+        <strong id="metricEntrega">-</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="resultsHead">
+        <div>
+          <h2 id="resultTitle">Seguimiento Correos</h2>
+          <p id="resultSubtitle">Ingresa una factura para consultar.</p>
+        </div>
+        <span id="resultCount"></span>
+      </div>
+      <div id="results" class="empty">Sin consulta.</div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js?v=20260625-correos"></script>
+</body>
+</html>
