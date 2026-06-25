@@ -48,6 +48,11 @@ function callCorreos(invoice) {
   return fetchJson(new URLSearchParams({invoice}));
 }
 
+function invoiceNumber(value) {
+  const match = String(value || "").match(/\d{4,8}/);
+  return match ? match[0] : "";
+}
+
 function renderEvents(events) {
   if (!events.length) return `<div class="empty">Correos no entrego eventos para este envio.</div>`;
   return `<div class="timeline">${events.map((event) => `<div class="event">
@@ -94,8 +99,9 @@ function renderResult(data) {
 
 async function search(event) {
   event.preventDefault();
-  const invoice = $("queryInput").value.trim();
+  const invoice = invoiceNumber($("queryInput").value);
   if (!invoice) return;
+  $("queryInput").value = invoice;
   $("searchButton").disabled = true;
   resetMetrics();
   $("resultTitle").textContent = `Factura ${invoice}`;

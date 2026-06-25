@@ -27,8 +27,8 @@
     <section class="panel searchPanel">
       <form id="searchForm">
         <label>
-          Factura
-          <input id="queryInput" autocomplete="off" placeholder="Ej: F-387501" required>
+          Numero de factura
+          <input id="queryInput" autocomplete="off" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 282772" required>
         </label>
         <button class="primary" id="searchButton" type="submit">Consultar</button>
       </form>
@@ -63,6 +63,6 @@
     </section>
   </main>
 
-  <script type="module" src="./app.js?v=20260625-correos"></script>
+  <script type="module" src="./app.js?v=20260625-correos-numero"></script>
 </body>
 </html>
